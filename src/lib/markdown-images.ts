@@ -88,13 +88,23 @@ function maskCode(input: string): { masked: string; restore: (value: string) => 
   return { masked, restore };
 }
 
-/** All image src tokens in document order, code masked out. */
+/**
+ * All image src tokens in document order, code masked out. The two syntaxes
+ * are scanned separately, then merged by position so order (and therefore
+ * which failures are named first) follows the document even when Markdown and
+ * HTML references interleave.
+ */
 function collectRefs(source: string): { masked: string; restore: (value: string) => string; refs: string[] } {
   const { masked, restore } = maskCode(source);
-  const refs: string[] = [];
-  for (const match of masked.matchAll(MD_IMAGE)) refs.push(cleanSrc(match[2] ?? ""));
-  for (const match of masked.matchAll(HTML_IMAGE_SRC)) refs.push(cleanSrc(match[3] ?? match[4] ?? ""));
-  return { masked, restore, refs };
+  const found: { index: number; src: string }[] = [];
+  for (const match of masked.matchAll(MD_IMAGE)) {
+    found.push({ index: match.index, src: cleanSrc(match[2] ?? "") });
+  }
+  for (const match of masked.matchAll(HTML_IMAGE_SRC)) {
+    found.push({ index: match.index, src: cleanSrc(match[3] ?? match[4] ?? "") });
+  }
+  found.sort((a, b) => a.index - b.index);
+  return { masked, restore, refs: found.map((entry) => entry.src) };
 }
 
 /** Unique relative image references, in document order. */
