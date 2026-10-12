@@ -14,6 +14,7 @@ import { findAdapter } from "../adapters/registry";
 import { MarkdownFetchError } from "./assets";
 import { BUTTON_ID, removeInjected, renderButtonState } from "./button";
 import { downloadBase64Pdf, suggestedTitleFromFilename } from "./download";
+import { boundFetch, type FetchLike } from "./fetch";
 import { matchGitHubMarkdown } from "./github-url";
 import { prepareExportMarkdown } from "./markdown-images";
 import { RENDER_MESSAGE_TYPE, type RenderRequest, type RenderResponse } from "./messages";
@@ -30,7 +31,7 @@ export interface ControllerOptions {
   /** Sends the render request to the background; injected for tests. */
   sendMessage: (request: RenderRequest) => Promise<RenderResponse>;
   /** Page-session fetch; defaults to the global fetch. */
-  fetchImpl?: typeof fetch;
+  fetchImpl?: FetchLike;
 }
 
 /**
@@ -40,7 +41,7 @@ export interface ControllerOptions {
  */
 export function startController(options: ControllerOptions): () => void {
   const doc = options.document;
-  const fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
+  const fetchImpl = boundFetch(options.fetchImpl);
   let busy = false;
   let buttonHref: string | null = null;
   let debounce: ReturnType<typeof setTimeout> | null = null;

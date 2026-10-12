@@ -12,6 +12,7 @@
 import { AssetError, MarkdownFetchError } from "../lib/assets";
 import { base64FromBytes } from "../lib/bytes";
 import { injectDownloadButton } from "../lib/button";
+import { boundFetch, type FetchLike } from "../lib/fetch";
 import {
   matchGitHubMarkdown,
   sanitizeFilename,
@@ -26,12 +27,14 @@ const FETCH_TIMEOUT_MS = 15_000;
 export class GitHubMarkdownAdapter implements MarkdownAdapter {
   private readonly target: GitHubMarkdownTarget;
   private readonly document: Document;
-  private readonly fetchImpl: typeof fetch;
+  private readonly fetchImpl: FetchLike;
 
   constructor(target: GitHubMarkdownTarget, context: Pick<AdapterContext, "document" | "fetchImpl">) {
     this.target = target;
     this.document = context.document;
-    this.fetchImpl = context.fetchImpl;
+    // Bound here: calling `this.fetchImpl(…)` would otherwise invoke native
+    // fetch with the adapter as `this` and throw Illegal invocation.
+    this.fetchImpl = boundFetch(context.fetchImpl);
   }
 
   matches(url: URL): boolean {

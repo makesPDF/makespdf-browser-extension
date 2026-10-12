@@ -6,6 +6,7 @@
 
 import browser from "webextension-polyfill";
 import { CLIENT_HEADER } from "./lib/build-target";
+import { boundFetch } from "./lib/fetch";
 import { RENDER_MESSAGE_TYPE, type RenderRequest } from "./lib/messages";
 import { renderMarkdown, type StoredDefaults } from "./lib/render-client";
 
@@ -20,7 +21,7 @@ function isRenderRequest(message: unknown): message is RenderRequest {
 browser.runtime.onMessage.addListener((message: unknown) => {
   if (!isRenderRequest(message)) return undefined;
   return renderMarkdown(message, {
-    fetchImpl: fetch,
+    fetchImpl: boundFetch(),
     clientHeaderValue: CLIENT_HEADER,
     getApiKey: async () => {
       const stored = await browser.storage.local.get("apiKey");

@@ -25,6 +25,12 @@ import assert from "node:assert/strict";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO = "https://github.com/makesPDF/makespdf-browser-extension";
+// Which ref to smoke. `main` once the fixtures are merged; point SMOKE_REF at
+// the task branch while the fixture only exists there (slash-containing refs
+// are exactly the case the raw-URL derivation must survive).
+const REF = process.env.SMOKE_REF ?? "main";
+// A public repo whose README sits on its default branch, for the repo-home check.
+const README_REPO = "https://github.com/makesPDF/makespdf-vscode-plugin";
 const EXTENSION = process.env.EXTENSION_DIR ?? join(ROOT, "dist/chromium");
 const OUT = process.env.SMOKE_OUT ?? join(tmpdir(), `makespdf-smoke-${process.pid}`);
 
@@ -58,11 +64,14 @@ const context = await chromium.launchPersistentContext(join(OUT, "profile"), {
 const page = await context.newPage();
 const pageErrors = [];
 const consoleMessages = [];
+const watchWorker = (worker) => {
+  worker.on("console", (message) => consoleMessages.push(`sw ${message.type()}: ${message.text()}`));
+  worker.on("close", () => consoleMessages.push("sw closed"));
+};
 page.on("pageerror", (error) => pageErrors.push(String(error)));
 page.on("console", (message) => consoleMessages.push(`page ${message.type()}: ${message.text()}`));
-context.on("serviceworker", (worker) => {
-  worker.on("console", (message) => consoleMessages.push(`sw ${message.type()}: ${message.text()}`));
-});
+for (const worker of context.serviceWorkers()) watchWorker(worker);
+context.on("serviceworker", watchWorker);
 
 let failed = false;
 const step = (message) => console.log(`→ ${message}`);
@@ -70,7 +79,7 @@ const ok = (message) => console.log(`   ✓ ${message}`);
 
 try {
   step("blob view of smoke/fixture.md");
-  await page.goto(`${REPO}/blob/main/smoke/fixture.md`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${REPO}/blob/${REF}/smoke/fixture.md`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("#makespdf-download-pdf-button", { timeout: 45_000 });
   assert.equal(await page.locator("#makespdf-download-pdf-button").count(), 1, "exactly one button");
   ok("button injected");
@@ -114,7 +123,7 @@ try {
   ok(`${secondBytes.length} bytes as second.pdf`);
 
   step("repo home README");
-  await page.goto(REPO, { waitUntil: "domcontentloaded" });
+  await page.goto(README_REPO, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("#makespdf-download-pdf-host #makespdf-download-pdf-button", { timeout: 45_000 });
   ok("home button present");
 } catch (error) {

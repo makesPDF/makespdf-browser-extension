@@ -143,6 +143,20 @@ describe("renderMarkdown", () => {
     if (!result.ok) expect(result.kind).toBe("network");
   });
 
+  it("calls fetch with the global receiver, not the deps object (native fetch throws otherwise)", async () => {
+    let receiver: unknown = "unset";
+    const fetchImpl = function (this: unknown) {
+      receiver = this;
+      return Promise.resolve(pdfResponse());
+    } as unknown as typeof fetch;
+    await renderMarkdown(REQUEST, {
+      fetchImpl,
+      clientHeaderValue: clientHeader("0.1.0", "chromium"),
+      getApiKey: async () => null,
+    });
+    expect(receiver).toBe(globalThis);
+  });
+
   it("sanitizes the returned filename", async () => {
     const { fetchImpl } = captureFetch(pdfResponse());
     const result = await renderMarkdown(

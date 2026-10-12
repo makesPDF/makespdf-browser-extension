@@ -4,13 +4,15 @@
  * Markdown source, asset resolution, button injection, filename.
  */
 
+import type { FetchLike } from "../lib/fetch";
+
 export interface AdapterContext {
   /** The page URL the adapter was created for. */
   url: URL;
   /** The page document, for button injection. */
   document: Document;
   /** `fetch` bound to the page's session; injected for tests. */
-  fetchImpl: typeof fetch;
+  fetchImpl: FetchLike;
 }
 
 export interface MarkdownAdapter {

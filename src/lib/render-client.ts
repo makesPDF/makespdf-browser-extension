@@ -11,6 +11,7 @@
 import { base64FromBytes } from "./bytes";
 import { CLIENT_HEADER } from "./build-target";
 import { mapFetchError, mapHttpError } from "./errors";
+import { boundFetch, type FetchLike } from "./fetch";
 import { sanitizeFilename } from "./github-url";
 import type { RenderRequest, RenderResponse } from "./messages";
 import { MD_ENDPOINT } from "./service";
@@ -24,7 +25,7 @@ export interface StoredDefaults {
 }
 
 export interface RenderDeps {
-  fetchImpl: typeof fetch;
+  fetchImpl: FetchLike;
   /**
    * The `X-MakesPDF-Client` value; defaults to this bundle's baked header.
    * Injecting it lets the tests pin a header per package.
@@ -53,15 +54,19 @@ export async function renderMarkdown(input: RenderRequest, deps: RenderDeps): Pr
   // failed auth attempt server-side.
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
 
+  const fetchImpl = boundFetch(deps.fetchImpl);
   let response: Response;
   try {
-    response = await deps.fetchImpl(MD_ENDPOINT, {
+    response = await fetchImpl(MD_ENDPOINT, {
       method: "POST",
       headers,
       body: JSON.stringify({ markdown: input.markdown, options }),
       signal: AbortSignal.timeout(RENDER_TIMEOUT_MS),
     });
   } catch (error) {
+    // Visible in the background's own console (chrome://extensions → service
+    // worker); the user sees the mapped message.
+    console.error("makesPDF render request failed", error);
     return { ok: false, ...mapFetchError(error) };
   }
 

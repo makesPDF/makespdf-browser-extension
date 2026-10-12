@@ -108,6 +108,23 @@ npm run build            # dist/chromium + dist/firefox (+ zips)
 npm run verify:packages  # structural checks over dist/ (loadability gate)
 ```
 
+### Manual smoke
+
+`smoke/` holds the public fixture (`fixture.md` + `logo.png`, plus
+`second.md` for soft navigation) and a scripted Chromium pass over the built
+package:
+
+```bash
+node smoke/chromium-smoke.mjs            # needs Playwright available; see the script
+SMOKE_REF=<branch> node smoke/chromium-smoke.mjs   # while the fixture is unmerged
+```
+
+It loads `dist/chromium`, clicks the button on the fixture, checks the
+downloaded PDF, soft-navigates to `second.md` and checks the button stays
+singular. The Firefox half of the manual smoke (`about:debugging` → Load
+Temporary Add-on → `dist/firefox`) is still manual: a private-repo file with
+relative images, and the same fixture flow.
+
 Unit tests cover URL matching (including refs containing `/`), relative path
 resolution, the image limits and failure messages, the HTTP error mapping, the
 `X-MakesPDF-Client` value per package (pinned both as a function and as a

@@ -76,6 +76,17 @@ describe("GitHubMarkdownAdapter.resolveAsset", () => {
     expect(calls[0]?.init?.redirect).toBe("follow");
   });
 
+  it("calls fetch with the global receiver, not the adapter (native fetch throws otherwise)", async () => {
+    let receiver: unknown = "unset";
+    const fetchImpl = function (this: unknown) {
+      receiver = this;
+      return Promise.resolve(imageResponse());
+    } as unknown as typeof fetch;
+    const adapter = adapterFor("https://github.com/acme/docs/blob/main/readme.md", fetchImpl);
+    await adapter.resolveAsset("shot.png");
+    expect(receiver).toBe(globalThis);
+  });
+
   it("rejects a path that escapes the repository", async () => {
     const { fetchImpl } = fakeFetch([]);
     const adapter = adapterFor("https://github.com/acme/docs/blob/main/readme.md", fetchImpl);
