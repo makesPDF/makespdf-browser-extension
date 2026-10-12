@@ -24,6 +24,23 @@ import type { AdapterContext, AdapterFactory, MarkdownAdapter } from "./types";
 
 const FETCH_TIMEOUT_MS = 15_000;
 
+/**
+ * Repo-home README filenames, in the order tried.
+ *
+ * GitHub's rendered home page finds a README under any of these spellings, but
+ * the raw route is a case-sensitive path lookup — `sindresorhus/awesome`'s
+ * lowercase `readme.md` 404s at `/raw/HEAD/README.md` — so the raw fetch has
+ * to try the common cases itself.
+ */
+const HOME_README_CANDIDATES = [
+  "README.md",
+  "readme.md",
+  "Readme.md",
+  "README.markdown",
+  "readme.markdown",
+  "Readme.markdown",
+] as const;
+
 export class GitHubMarkdownAdapter implements MarkdownAdapter {
   private readonly target: GitHubMarkdownTarget;
   private readonly document: Document;
@@ -43,14 +60,15 @@ export class GitHubMarkdownAdapter implements MarkdownAdapter {
 
   /**
    * Fetch the raw Markdown through the page's session. Never scrapes the
-   * rendered page. The repo home tries README.md then README.markdown; a blob
-   * view fetches its own raw URL (which works for any ref, including tags and
-   * SHAs, and for refs containing slashes — GitHub resolves them server-side).
+   * rendered page. The repo home tries the common README filename cases (the
+   * raw route is case-sensitive); a blob view fetches its own raw URL (which
+   * works for any ref, including tags and SHAs, and for refs containing
+   * slashes — GitHub resolves them server-side).
    */
   async getMarkdown(): Promise<string> {
     const urls =
       this.target.kind === "home"
-        ? [this.target.rawUrl, this.target.rawUrl.replace(/README\.md$/i, "README.markdown")]
+        ? HOME_README_CANDIDATES.map((name) => `${this.target.rawDirUrl}${name}`)
         : [this.target.rawUrl];
 
     for (const url of urls) {

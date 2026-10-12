@@ -70,6 +70,20 @@ describe("injectDownloadButton", () => {
     expect(document.getElementById(FLOATING_HOST_ID)).not.toBeNull();
   });
 
+  it("keeps the home button floating even when the README links to a raw path", () => {
+    // A README may link to `/owner/repo/raw/...` itself; that is page content,
+    // not the header's Raw button, and the button must not land inside it.
+    document.body.innerHTML =
+      '<div id="readme"><article class="markdown-body">' +
+      '<a href="/acme/docs/raw/main/logo.png">logo</a></article></div>';
+    expect(injectDownloadButton(document, HOME_TARGET, () => {})).toBe(true);
+
+    expect(document.getElementById(FLOATING_HOST_ID)).not.toBeNull();
+    const readme = document.getElementById("readme");
+    expect(readme?.querySelector(`#${BUTTON_ID}`)).toBeNull();
+    expect(readme?.querySelector("a")?.getAttribute("href")).toBe("/acme/docs/raw/main/logo.png");
+  });
+
   it("removeInjected clears the button, status and floating host", () => {
     injectDownloadButton(document, BLOB_TARGET, () => {});
     removeInjected(document);

@@ -65,7 +65,12 @@ interface InsertionPoint {
   before: Node | null;
 }
 
-/** The header container to join, or null when the page offers none. */
+/**
+ * The blob header container to join, or null when the page offers none.
+ * Blob views only: a repo home page's rendered README can itself link to
+ * `/owner/repo/raw/...`, which would look like a header Raw link and plant the
+ * button inside the README — the home button always floats instead.
+ */
 function findBlobHost(doc: Document): InsertionPoint | null {
   const raw = findRawLink(doc);
   if (!raw) return null;
@@ -121,7 +126,7 @@ export function injectDownloadButton(
   status.setAttribute("aria-live", "polite");
   status.style.cssText = STATUS_STYLE;
 
-  const host = findBlobHost(doc);
+  const host = target.kind === "blob" ? findBlobHost(doc) : null;
   if (host) {
     host.parent.insertBefore(button, host.before);
     host.parent.insertBefore(status, host.before);

@@ -140,7 +140,7 @@ describe("GitHubMarkdownAdapter.getMarkdown", () => {
     expect(calls[0]?.url).toBe("https://github.com/acme/docs/raw/main/readme.md");
   });
 
-  it("tries README.markdown when README.md is missing on the repo home", async () => {
+  it("falls back to a lowercase readme.md on the repo home (the raw route is case-sensitive)", async () => {
     const { fetchImpl, calls } = fakeFetch([
       new Response("not found", { status: 404 }),
       new Response("# Hi\n", { status: 200 }),
@@ -149,19 +149,26 @@ describe("GitHubMarkdownAdapter.getMarkdown", () => {
     await expect(adapter.getMarkdown()).resolves.toBe("# Hi\n");
     expect(calls.map((call) => call.url)).toEqual([
       "https://github.com/acme/docs/raw/HEAD/README.md",
-      "https://github.com/acme/docs/raw/HEAD/README.markdown",
+      "https://github.com/acme/docs/raw/HEAD/readme.md",
     ]);
   });
 
-  it("reports a missing README clearly", async () => {
-    const { fetchImpl } = fakeFetch([
-      new Response("not found", { status: 404 }),
-      new Response("not found", { status: 404 }),
-    ]);
+  it("tries every common README spelling, then reports a missing README clearly", async () => {
+    const { fetchImpl, calls } = fakeFetch(
+      Array.from({ length: 6 }, () => new Response("not found", { status: 404 })),
+    );
     const adapter = adapterFor("https://github.com/acme/docs", fetchImpl);
     const pending = adapter.getMarkdown();
     await expect(pending).rejects.toThrow(MarkdownFetchError);
     await expect(pending).rejects.toThrow("No README.md");
+    expect(calls.map((call) => call.url)).toEqual([
+      "https://github.com/acme/docs/raw/HEAD/README.md",
+      "https://github.com/acme/docs/raw/HEAD/readme.md",
+      "https://github.com/acme/docs/raw/HEAD/Readme.md",
+      "https://github.com/acme/docs/raw/HEAD/README.markdown",
+      "https://github.com/acme/docs/raw/HEAD/readme.markdown",
+      "https://github.com/acme/docs/raw/HEAD/Readme.markdown",
+    ]);
   });
 
   it("reports a non-404 failure with its status", async () => {

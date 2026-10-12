@@ -107,16 +107,25 @@ function collectRefs(source: string): { masked: string; restore: (value: string)
   return { masked, restore, refs: found.map((entry) => entry.src) };
 }
 
-/** Unique relative image references, in document order. */
-export function findRelativeRefs(source: string): string[] {
+/**
+ * Unique image references in document order, whatever their scheme — these
+ * are the `img` srcs the server sees after the export, so they are also the
+ * ones its per-document image cap counts.
+ */
+export function collectImageRefs(source: string): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const ref of collectRefs(source).refs) {
-    if (!ref || !isRelativeAsset(ref) || seen.has(ref)) continue;
+    if (!ref || seen.has(ref)) continue;
     seen.add(ref);
     out.push(ref);
   }
   return out;
+}
+
+/** Unique relative image references, in document order. */
+export function findRelativeRefs(source: string): string[] {
+  return collectImageRefs(source).filter(isRelativeAsset);
 }
 
 /**
@@ -192,13 +201,16 @@ export async function prepareExportMarkdown(
   source: string,
   resolve: (src: string) => Promise<string>,
 ): Promise<PreparedExport> {
-  const refs = findRelativeRefs(source);
+  // The server's cap counts every image src in the document (inlined data:
+  // URIs and absolute URLs included) and drops the ones past it without a
+  // trace, so the pre-flight counts the same set: relative and absolute.
+  const refs = collectImageRefs(source);
   if (refs.length > MAX_IMAGE_COUNT) {
     return {
       ok: false,
       message:
         `Export stopped, no PDF was written: the document references ${refs.length} ` +
-        `images that must be embedded, but at most ${MAX_IMAGE_COUNT} can be. ` +
+        `images, but at most ${MAX_IMAGE_COUNT} can be embedded per document. ` +
         "Remove some images and export again.",
     };
   }

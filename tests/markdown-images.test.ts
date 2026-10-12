@@ -122,10 +122,25 @@ describe("prepareExportMarkdown", () => {
     }
   });
 
-  it("passes exactly at the cap", async () => {
-    const markdown = Array.from({ length: MAX_IMAGE_COUNT }, (_, i) => `![img](img/${i}.png)`).join("\n");
+  it("counts absolute images toward the cap too, matching the server's all-src count", async () => {
+    const markdown = Array.from({ length: MAX_IMAGE_COUNT - 1 }, (_, i) => `![img](img/${i}.png)`)
+      .concat([
+        "![one](https://example.com/one.png)",
+        "![two](https://example.com/two.png)",
+      ])
+      .join("\n");
+    const result = await prepareExportMarkdown(markdown, okResolve);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.message).toContain(`references ${MAX_IMAGE_COUNT + 1} images`);
+  });
+
+  it("passes at the cap with a mix of relative and absolute refs, leaving the absolute ones alone", async () => {
+    const markdown = Array.from({ length: MAX_IMAGE_COUNT - 1 }, (_, i) => `![img](img/${i}.png)`)
+      .concat(["![remote](https://example.com/one.png)"])
+      .join("\n");
     const result = await prepareExportMarkdown(markdown, okResolve);
     expect(result.ok).toBe(true);
+    if (result.ok) expect(result.markdown).toContain("![remote](https://example.com/one.png)");
   });
 
   it("stops with the image message when any reference fails", async () => {

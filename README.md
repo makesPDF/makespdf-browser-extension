@@ -121,9 +121,20 @@ SMOKE_REF=<branch> node smoke/chromium-smoke.mjs   # while the fixture is unmerg
 
 It loads `dist/chromium`, clicks the button on the fixture, checks the
 downloaded PDF, soft-navigates to `second.md` and checks the button stays
-singular. The Firefox half of the manual smoke (`about:debugging` → Load
-Temporary Add-on → `dist/firefox`) is still manual: a private-repo file with
-relative images, and the same fixture flow.
+singular.
+
+The Firefox package has the same scripted smoke, driven through the real
+Firefox over Marionette (`web-ext run` installs `dist/firefox` temporarily —
+Playwright cannot load extensions in its Firefox):
+
+```bash
+node smoke/firefox-smoke.mjs                          # needs FIREFOX_BIN; see the script
+SMOKE_REF=<branch> node smoke/firefox-smoke.mjs       # while the fixture is unmerged
+```
+
+It runs the same flow end to end (render, download, soft navigation, repo
+home). Still manual on top of both scripts: a **private-repo** file with
+relative images.
 
 Unit tests cover URL matching (including refs containing `/`), relative path
 resolution, the image limits and failure messages, the HTTP error mapping, the
