@@ -134,6 +134,9 @@ soft navigation.
 ### Limitations (MVP)
 
 - GitHub only; `.md`/`.markdown` file views and repo-home READMEs.
+- Inline images only: `![alt](./x.png)` and `<img src="...">`. Reference-style
+  images (`![alt][id]` with `[id]: ./x.png`) are not inlined yet, so the
+  server drops the unfetchable relative URL (it reports a layout warning).
 - At most 20 relative images per document; more stops the export.
 - Root-relative image paths (`/img.png`) are resolved at the first path
   segment after `/blob/` as the ref — refs containing `/` combined with
