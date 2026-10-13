@@ -1,0 +1,30 @@
+{
+  "name": "makespdf-browser-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser extension: download GitHub Markdown files as PDF via makesPDF",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify:packages": "node scripts/verify-packages.mjs"
+  },
+  "dependencies": {
+    "webextension-polyfill": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/webextension-polyfill": "^0.12.3",
+    "esbuild": "^0.25.0",
+    "jsdom": "^26.0.0",
+    "jszip": "^3.10.1",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

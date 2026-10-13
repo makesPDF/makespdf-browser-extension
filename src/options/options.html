@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>makesPDF options</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>makesPDF</h1>
+      <p class="lede">Download GitHub Markdown files as PDF. Open any <code>.md</code> file on GitHub and press <strong>Download PDF</strong>.</p>
+
+      <label for="api-key">API key</label>
+      <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="Leave empty for anonymous renders" />
+      <p class="hint">
+        Stored in this browser only, never synced. Anonymous renders work without a key (stricter limits, nothing stored).
+        <a href="https://makespdf.com/settings/api-keys" target="_blank" rel="noopener">Create an API key</a>.
+      </p>
+
+      <div class="row">
+        <div class="field">
+          <label for="page-size">Page size</label>
+          <select id="page-size">
+            <option value="A3">A3</option>
+            <option value="A4" selected>A4</option>
+            <option value="A5">A5</option>
+            <option value="Letter">Letter</option>
+            <option value="Legal">Legal</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="theme">Theme</label>
+          <select id="theme">
+            <option value="default" selected>Default</option>
+            <option value="github">GitHub</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="save" type="button">Save</button>
+        <span id="status" role="status" aria-live="polite"></span>
+      </div>
+
+      <section class="privacy">
+        <h2>Privacy</h2>
+        <p>
+          To render a PDF, the Markdown text of the file you export — including any relative images embedded in it — is sent
+          to makesPDF. Anonymous renders are not stored. Renders made with an API key are kept as a 7-day artifact on your
+          account. No other page data leaves your browser.
+        </p>
+        <p><a href="https://makespdf.com/privacy" target="_blank" rel="noopener">Privacy policy</a></p>
+      </section>
+    </main>
+  </body>
+</html>
