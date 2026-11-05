@@ -57,6 +57,59 @@ describe("inlineRelativeImages", () => {
     );
   });
 
+  it("finds paths with parentheses in every destination form", () => {
+    expect(
+      findRelativeRefs(
+        '![a](a(b).png) ![b](c\\(d\\).png) ![c](<e (f).png>) ![d](g%20(h).png) ![e](u(v.png) ![f](<x\\>y.png>)',
+      ),
+    ).toEqual(["a(b).png", "c(d).png", "e (f).png", "g%20(h).png", "u(v.png", "x>y.png"]);
+  });
+
+  it("finds nested parentheses and an unescaped < in full", () => {
+    expect(findRelativeRefs("![a](a((b)).png) ![b](a(b(c)d).png) ![c](<a<b c.png>)")).toEqual([
+      "a((b)).png",
+      "a(b(c)d).png",
+      "a<b c.png",
+    ]);
+  });
+
+  it("does not make a path from a backslash before a space", () => {
+    expect(findRelativeRefs("![a](my\\ photo.png)")).toEqual([]);
+  });
+
+  it("keeps a backslash before a parenthesis inside angle brackets", () => {
+    expect(findRelativeRefs("![a](<pics\\(1).png>)")).toEqual(["pics\\(1).png"]);
+  });
+
+  it("embeds a path with parentheses and keeps what follows the image", async () => {
+    const { markdown, failures } = await inlineRelativeImages(
+      '![a](a(b).png "the (title)") (see above) ![b](plain.png) (note)',
+      okResolve,
+    );
+    expect(markdown).toBe(
+      '![a](data:image/png;base64,RESOLVED(a(b).png) "the (title)") (see above) ![b](data:image/png;base64,RESOLVED(plain.png)) (note)',
+    );
+    expect(failures).toEqual([]);
+  });
+
+  it("does not treat an img src as a markdown destination", () => {
+    expect(findRelativeRefs('<img src="a\\(b\\).png">')).toEqual(["a\\(b\\).png"]);
+  });
+
+  it("does not stall on an unterminated destination", () => {
+    for (const tail of ["(a)".repeat(50_000), "((a)".repeat(50_000), "\\(".repeat(50_000), " ".repeat(160_000)]) {
+      const started = Date.now();
+      findRelativeRefs(`![x](${tail}`);
+      expect(Date.now() - started).toBeLessThan(2000);
+    }
+  });
+
+  it("leaves a multi-megabyte data URI alone", () => {
+    const data = `data:image/png;base64,${"A".repeat(16_000_000)}`;
+    expect(findRelativeRefs(`![x](${data})`)).toEqual([]);
+    expect(findRelativeRefs(`![x](<${data}>)`)).toEqual([]);
+  });
+
   it("preserves a Markdown title after the URL", async () => {
     const { markdown: out } = await inlineRelativeImages('![shot](shot.png "the title")', okResolve);
     expect(out).toBe('![shot](data:image/png;base64,RESOLVED(shot.png) "the title")');
