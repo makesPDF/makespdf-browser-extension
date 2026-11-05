@@ -40,9 +40,14 @@ export type PreparedExport =
   | { ok: true; markdown: string }
   | { ok: false; message: string };
 
-// Markdown image: ![alt](src "optional title"). Group 2 is the src (possibly
-// wrapped in <…>); group 3 is the optional title with its leading whitespace.
-const MD_IMAGE = /!\[([^\]]*)\]\(\s*(<[^>]+>|[^)\s]+)((?:\s+(?:"[^"]*"|'[^']*'))?)\s*\)/g;
+// Markdown image: ![alt](src "optional title"). Group 3 is the optional title
+// with its leading whitespace. Group 2 is the src, one of:
+//   - angle brackets, with `<` and `>` escaped inside: `<my (1).png>`
+//   - bare, with balanced or backslash-escaped parentheses: `a(b).png`, `a\(b.png`
+//   - bare, up to the first `)`, for an unbalanced `(`: `a(b.png`
+// The balanced form is an unrolled loop because nesting the quantifiers
+// backtracks exponentially on an unterminated `![a](xxxx`.
+const MD_IMAGE = /!\[([^\]]*)\]\(\s*(<(?:\\.|[^<>\n\\])*>|(?=[^\s)])[^\s()\\]*(?:(?:\\.|\([^\s()\\]*(?:\\.[^\s()\\]*)*\))[^\s()\\]*)*|[^)\s]+)((?:\s+(?:"[^"]*"|'[^']*'))?)\s*\)/g;
 // HTML <img …src="…">. Group 1 is everything up to and including `src=`,
 // group 3/4 is the quoted value (double/single). `[\s/]+` before `src`, not a
 // bare `\b`, so `data-src=` is not mistaken for the real attribute.
@@ -65,6 +70,15 @@ export function isRelativeAsset(src: string): boolean {
 function cleanSrc(raw: string): string {
   const trimmed = raw.trim();
   return trimmed.startsWith("<") && trimmed.endsWith(">") ? trimmed.slice(1, -1).trim() : trimmed;
+}
+
+/**
+ * The src of a markdown image: `cleanSrc`, then undo the escapes markdown
+ * allows in a destination. HTML attributes have no such escapes, so `<img>`
+ * srcs stay on `cleanSrc`.
+ */
+function cleanMarkdownSrc(raw: string): string {
+  return cleanSrc(raw).replace(/\\([()<>])/g, "$1");
 }
 
 /**
@@ -98,7 +112,7 @@ function collectRefs(source: string): { masked: string; restore: (value: string)
   const { masked, restore } = maskCode(source);
   const found: { index: number; src: string }[] = [];
   for (const match of masked.matchAll(MD_IMAGE)) {
-    found.push({ index: match.index, src: cleanSrc(match[2] ?? "") });
+    found.push({ index: match.index, src: cleanMarkdownSrc(match[2] ?? "") });
   }
   for (const match of masked.matchAll(HTML_IMAGE_SRC)) {
     found.push({ index: match.index, src: cleanSrc(match[3] ?? match[4] ?? "") });
@@ -159,7 +173,7 @@ export async function inlineRelativeImages(
   if (uris.size === 0) return { markdown: source, failures };
 
   let out = masked.replace(MD_IMAGE, (whole, alt: string, url: string, title: string | undefined) => {
-    const uri = uris.get(cleanSrc(url));
+    const uri = uris.get(cleanMarkdownSrc(url));
     return uri ? `![${alt}](${uri}${title ?? ""})` : whole;
   });
   out = out.replace(HTML_IMAGE_SRC, (whole, prefix: string, _quoted: string, doubleQuoted: string | undefined, singleQuoted: string | undefined) => {
