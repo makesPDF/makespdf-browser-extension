@@ -87,12 +87,12 @@ object-URL anchor → <file-stem>.pdf
   (`./`, `../`, nested dirs; `/`-rooted against the repo root) and inlined as
   `data:` URIs. `/md`'s limits are mirrored: **5 MB per image, 20 images per
   document**. If any image cannot be embedded the export stops and names it —
-  a PDF silently missing an image is worse than no PDF (the VS Code plugin's
-  MAK-191 precedent). Absolute `https:` images are left for the server.
+  a PDF silently missing an image is worse than no PDF (the VS Code plugin
+  does the same). Absolute `https:` images are left for the server.
 - **Errors** mirror the wording of the VS Code/Zed clients: 401 with a saved
   key blames the key, anonymous 401 points at sign-up, 429 carries the
   server's tip, and 400/413 surface the server's message.
-- **Adapters** (`src/adapters/`) are additive — MAK-197's later sources
+- **Adapters** (`src/adapters/`) are additive — further sources
   implement the same `MarkdownAdapter` interface
   (`matches`, `getMarkdown`, `resolveAsset`, `injectButton`,
   `suggestedFilename`) and register in `src/adapters/registry.ts`.
